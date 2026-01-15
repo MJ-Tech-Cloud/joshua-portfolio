@@ -121,45 +121,73 @@ document.addEventListener('DOMContentLoaded', function() {
         // Fallback to EmailJS (works everywhere)
         try {
             // Wait a moment for EmailJS to be ready if needed
-            if (!emailjsReady && typeof emailjs !== 'undefined') {
-                emailjs.init('8eGa_zxTA7wQwtGWy');
-                emailjsReady = true;
+            if (typeof emailjs === 'undefined') {
+                throw new Error('EmailJS library not loaded. Please check your internet connection and refresh the page.');
             }
             
-            if (typeof emailjs === 'undefined') {
-                throw new Error('EmailJS library not loaded. Please check your internet connection.');
+            // Initialize EmailJS if not already done
+            if (!emailjsReady) {
+                try {
+                    emailjs.init('8eGa_zxTA7wQwtGWy');
+                    emailjsReady = true;
+                    console.log('EmailJS initialized');
+                } catch (initError) {
+                    console.error('EmailJS init error:', initError);
+                    throw new Error('Failed to initialize EmailJS: ' + initError.message);
+                }
             }
+            
+            console.log('Sending email with EmailJS...');
+            console.log('Service ID:', 'service_smoy6yt');
+            console.log('Template ID:', 'template_uhkxkff');
+            
+            const templateParams = {
+                name: name,
+                email: email,
+                message: message,
+                from_name: name,
+                from_email: email,
+                reply_to: email
+            };
+            
+            console.log('Template params:', templateParams);
             
             const result = await emailjs.send(
                 'service_smoy6yt',      // EmailJS Service ID
                 'template_uhkxkff',    // EmailJS Template ID
-                {
-                    from_name: name,
-                    from_email: email,
-                    message: message,
-                    name: name,
-                    email: email,
-                    reply_to: email
-                }
+                templateParams
             );
             
-            if (result.status === 200) {
+            console.log('EmailJS result:', result);
+            
+            if (result && result.status === 200) {
                 showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
                 this.reset();
             } else {
-                throw new Error('EmailJS returned status: ' + result.status);
+                throw new Error('EmailJS returned unexpected status: ' + (result ? result.status : 'no response'));
             }
         } catch (error) {
-            console.error('EmailJS Error:', error);
+            console.error('EmailJS Error Details:', error);
+            console.error('Error type:', typeof error);
+            console.error('Error keys:', Object.keys(error));
+            
             let errorMessage = 'Sorry, there was an error sending your message. ';
             
+            // Check different error formats
             if (error.text) {
-                errorMessage += error.text;
+                errorMessage += 'Error: ' + error.text;
             } else if (error.message) {
                 errorMessage += error.message;
+            } else if (error.status) {
+                errorMessage += 'Status: ' + error.status;
+            } else if (typeof error === 'string') {
+                errorMessage += error;
             } else {
-                errorMessage += 'Please try again later or contact me directly at joshuamwila2004@gmail.com';
+                errorMessage += 'Please check the browser console for details or contact me directly at joshuamwila2004@gmail.com';
             }
+            
+            // Log full error for debugging
+            console.error('Full error object:', JSON.stringify(error, null, 2));
             
             showNotification(errorMessage, 'error');
         } finally {

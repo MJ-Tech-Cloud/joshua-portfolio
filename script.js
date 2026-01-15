@@ -27,86 +27,147 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Contact Form Handling - Works with both Netlify Forms and EmailJS
-const contactForm = document.getElementById('contactForm');
+// Initialize EmailJS when page loads
+let emailjsReady = false;
 
-contactForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
+// Wait for DOM and EmailJS to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize EmailJS
+    function initEmailJS() {
+        if (typeof emailjs !== 'undefined') {
+            try {
+                emailjs.init('8eGa_zxTA7wQwtGWy');
+                emailjsReady = true;
+                console.log('EmailJS initialized successfully');
+            } catch (error) {
+                console.error('EmailJS initialization error:', error);
+            }
+        }
+    }
     
-    // Get form data
-    const formData = new FormData(this);
-    const name = formData.get('name');
-    const email = formData.get('email');
-    const message = formData.get('message');
+    // Try to initialize immediately
+    initEmailJS();
     
-    // Basic validation
-    if (!name || !email || !message) {
-        showNotification('Please fill in all fields.', 'error');
+    // If not ready, wait a bit and try again
+    if (!emailjsReady) {
+        setTimeout(initEmailJS, 500);
+    }
+});
+
+// Contact Form Handling - Works with both Netlify Forms and EmailJS
+let contactForm;
+
+// Wait for DOM to be ready before setting up form
+document.addEventListener('DOMContentLoaded', function() {
+    contactForm = document.getElementById('contactForm');
+    
+    if (!contactForm) {
+        console.error('Contact form not found');
         return;
     }
     
-    if (!isValidEmail(email)) {
-        showNotification('Please enter a valid email address.', 'error');
-        return;
-    }
-    
-    // Disable submit button to prevent double submission
-    const submitButton = this.querySelector('button[type="submit"]');
-    const originalButtonText = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-    
-    // Try Netlify Forms first (if deployed on Netlify)
-    try {
-        const response = await fetch('/', {
-            method: 'POST',
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams(formData).toString()
-        });
+    contactForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        if (response.ok) {
-            showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
-            this.reset();
+        // Get form data
+        const formData = new FormData(this);
+        const name = formData.get('name');
+        const email = formData.get('email');
+        const message = formData.get('message');
+        
+        // Basic validation
+        if (!name || !email || !message) {
+            showNotification('Please fill in all fields.', 'error');
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            showNotification('Please enter a valid email address.', 'error');
+            return;
+        }
+        
+        // Disable submit button to prevent double submission
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        
+        // Try Netlify Forms first (if deployed on Netlify)
+        let netlifySuccess = false;
+        try {
+            const response = await fetch('/', {
+                method: 'POST',
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(formData).toString()
+            });
+            
+            if (response.ok) {
+                showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
+                this.reset();
+                netlifySuccess = true;
+            }
+        } catch (error) {
+            // Netlify Forms not available, will try EmailJS
+            console.log('Netlify Forms not available, trying EmailJS...');
+        }
+        
+        // If Netlify succeeded, we're done
+        if (netlifySuccess) {
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonText;
             return;
         }
-    } catch (error) {
-        // Netlify Forms not available, try EmailJS
-        console.log('Netlify Forms not available, trying EmailJS...');
-    }
-    
-    // Fallback to EmailJS (works everywhere)
-    try {
-        // Initialize EmailJS (if not already initialized)
-        if (typeof emailjs !== 'undefined') {
-            // Initialize EmailJS with public key
-            emailjs.init('8eGa_zxTA7wQwtGWy');
+        
+        // Fallback to EmailJS (works everywhere)
+        try {
+            // Wait a moment for EmailJS to be ready if needed
+            if (!emailjsReady && typeof emailjs !== 'undefined') {
+                emailjs.init('8eGa_zxTA7wQwtGWy');
+                emailjsReady = true;
+            }
             
-            await emailjs.send(
+            if (typeof emailjs === 'undefined') {
+                throw new Error('EmailJS library not loaded. Please check your internet connection.');
+            }
+            
+            const result = await emailjs.send(
                 'service_smoy6yt',      // EmailJS Service ID
                 'template_uhkxkff',    // EmailJS Template ID
                 {
+                    from_name: name,
+                    from_email: email,
+                    message: message,
                     name: name,
                     email: email,
-                    message: message,
-                    to_email: 'joshuamwila2004@gmail.com'
+                    reply_to: email
                 }
             );
             
-            showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
-            this.reset();
-        } else {
-            throw new Error('EmailJS not loaded');
+            if (result.status === 200) {
+                showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
+                this.reset();
+            } else {
+                throw new Error('EmailJS returned status: ' + result.status);
+            }
+        } catch (error) {
+            console.error('EmailJS Error:', error);
+            let errorMessage = 'Sorry, there was an error sending your message. ';
+            
+            if (error.text) {
+                errorMessage += error.text;
+            } else if (error.message) {
+                errorMessage += error.message;
+            } else {
+                errorMessage += 'Please try again later or contact me directly at joshuamwila2004@gmail.com';
+            }
+            
+            showNotification(errorMessage, 'error');
+        } finally {
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('Please set up EmailJS to enable contact form. See EMAILJS_SETUP.md for instructions.', 'error');
-    } finally {
-        // Re-enable submit button
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
-    }
+    });
 });
 
 // Email validation function

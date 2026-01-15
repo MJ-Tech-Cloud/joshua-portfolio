@@ -1,0 +1,11 @@
+# Netlify Configuration File
+# This file helps Netlify process your forms correctly
+
+[build]
+  publish = "."
+
+# Form settings
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

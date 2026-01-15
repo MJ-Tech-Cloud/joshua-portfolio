@@ -1,0 +1,19 @@
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional: Don't ignore these since they're needed for the website
+# node_modules/
+# .env

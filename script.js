@@ -27,7 +27,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Contact Form Handling with Netlify Forms
+// Contact Form Handling - Works with both Netlify Forms and EmailJS
 const contactForm = document.getElementById('contactForm');
 
 contactForm.addEventListener('submit', async function(e) {
@@ -56,8 +56,8 @@ contactForm.addEventListener('submit', async function(e) {
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
     
+    // Try Netlify Forms first (if deployed on Netlify)
     try {
-        // Submit to Netlify Forms
         const response = await fetch('/', {
             method: 'POST',
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -67,12 +67,41 @@ contactForm.addEventListener('submit', async function(e) {
         if (response.ok) {
             showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
             this.reset();
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+            return;
+        }
+    } catch (error) {
+        // Netlify Forms not available, try EmailJS
+        console.log('Netlify Forms not available, trying EmailJS...');
+    }
+    
+    // Fallback to EmailJS (works everywhere)
+    try {
+        // Initialize EmailJS (if not already initialized)
+        if (typeof emailjs !== 'undefined') {
+            // Initialize EmailJS with public key
+            emailjs.init('8eGa_zxTA7wQwtGWy');
+            
+            await emailjs.send(
+                'service_smoy6yt',      // EmailJS Service ID
+                'template_uhkxkff',    // EmailJS Template ID
+                {
+                    name: name,
+                    email: email,
+                    message: message,
+                    to_email: 'joshuamwila2004@gmail.com'
+                }
+            );
+            
+            showNotification('Thank you for your message! I\'ll get back to you soon.', 'success');
+            this.reset();
         } else {
-            showNotification('Sorry, there was an error sending your message. Please try again later.', 'error');
+            throw new Error('EmailJS not loaded');
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('Sorry, there was an error sending your message. Please try again later.', 'error');
+        showNotification('Please set up EmailJS to enable contact form. See EMAILJS_SETUP.md for instructions.', 'error');
     } finally {
         // Re-enable submit button
         submitButton.disabled = false;

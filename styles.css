@@ -117,11 +117,11 @@ body {
     align-items: center;
     padding-top: 80px;
     position: relative;
-    /* Uiverse.io background pattern */
+    /* Uiverse.io background pattern - Dark Gray */
     --s: 200px; /* control the size */
-    --c1: #1d1d1d;
-    --c2: #4e4f51;
-    --c3: #3c3c3c;
+    --c1: #2d2d2d;
+    --c2: #3d3d3d;
+    --c3: #2a2a2a;
     background: repeating-conic-gradient(
             from 30deg,
             #0000 0 120deg,

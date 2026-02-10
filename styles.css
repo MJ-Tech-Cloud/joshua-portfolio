@@ -170,7 +170,7 @@ body {
 .hero-title {
     font-size: 3.5rem;
     font-weight: 700;
-    color: var(--text-dark);
+    color: #0a0a0a;
     margin-bottom: 1rem;
     line-height: 1.2;
 }
